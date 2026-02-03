@@ -21,8 +21,8 @@ A starter template for [marimo](https://marimo.io) notebooks using [uv](https://
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/mohitshrestha/marimo-uv-starter-template
-   cd marimo-uv-starter-template
+   git clone https://github.com/mohitshrestha/nepal-election-2082
+   cd nepal-election-2082
    ```
 
 2. Run the marimo editor:

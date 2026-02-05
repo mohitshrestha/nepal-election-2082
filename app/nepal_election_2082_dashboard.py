@@ -35,7 +35,7 @@ def _(duckdb, mo, pd):
         # 2. Let Pandas handle the fetch
         # Pandas is "WASM-aware" and knows how to download from a URL
         # or read from a local file automatically.
-        df = pd.read_json(str(path))
+        df = pd.read_json(str(path), compression=None)
 
         # 3. Register the DataFrame into DuckDB
         con.register("election", df)

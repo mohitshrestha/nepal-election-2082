@@ -19,26 +19,39 @@ def _():
     import marimo as mo
     import duckdb
     import pandas as pd
-    return duckdb, mo, pd
+    import json
+    import urllib.request
+    from urllib.parse import urlparse
+    return duckdb, json, mo, pd, urllib, urlparse
 
 
 @app.cell
-def _(duckdb, mo, pd):
+def _(duckdb, json, mo, pd, urllib, urlparse):
     # 1. Construct the path (works locally and in WASM)
     # This will be a Path object locally and a URL string in WASM
     path = mo.notebook_location() / "public" / "data" / "election.json"
 
 
+    def is_url(p: str) -> bool:
+        parsed = urlparse(p)
+        return parsed.scheme in ("http", "https")
+
+
     def load_con():
         con = duckdb.connect()
 
-        # 2. Let Pandas handle the fetch
-        # Pandas is "WASM-aware" and knows how to download from a URL
-        # or read from a local file automatically.
-        df = pd.read_json(str(path), compression=None)
+        # 1. Fetch JSON either from URL or local file
+        if is_url(str(path)):
+            with urllib.request.urlopen(str(path)) as f:
+                data = json.load(f)
+        else:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-        # 3. Register the DataFrame into DuckDB
+        # 2. Load into pandas then DuckDB
+        df = pd.DataFrame(data)
         con.register("election", df)
+
         return con
     return (load_con,)
 

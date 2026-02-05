@@ -175,9 +175,15 @@ def _(con, mo, pd):
     # Query main parties + aggregate "स्वतन्त्र"
     party_breakdown_stats = con.execute("""
         SELECT 
-            CASE WHEN political_party_name='स्वतन्त्र' THEN 'स्वतन्त्र' ELSE political_party_name END AS political_party_name,
-            MAX(symbol_image) AS symbol_image,
-            MAX(symbol_name) AS symbol_name,
+            political_party_name,
+            CASE 
+                WHEN political_party_name = 'स्वतन्त्र' THEN NULL 
+                ELSE MAX(symbol_image) 
+            END AS symbol_image,
+            CASE 
+                WHEN political_party_name = 'स्वतन्त्र' THEN 'स्वतन्त्र'
+                ELSE MAX(symbol_name) 
+            END AS symbol_name,
             SUM(count) AS count
         FROM (
             SELECT political_party_name, symbol_image, symbol_name, COUNT(*) AS count
@@ -197,29 +203,80 @@ def _(con, mo, pd):
 
     total_candidates_main = party_breakdown_df["count"].sum()
 
-    # Create cards as before for these main parties
+    # Create cards
     party_cards = []
+
     for _, row in party_breakdown_df.iterrows():
+        is_independent = row["political_party_name"] == "स्वतन्त्र"
+
+        # Symbol block
+        if is_independent:
+            symbol_html = """
+            <div style="text-align:center;">
+                <div style="
+                    width:50px;
+                    height:50px;
+                    border-radius:50%;
+                    background:#e0e0e0;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    margin:0 auto 4px auto;
+                    font-weight:bold;
+                    color:#555;
+                    font-size:0.75em;
+                ">
+                    स्वतन्त्र
+                </div>
+                <em style="font-size:0.85em; color:#555;">स्वतन्त्र</em>
+            </div>
+            """
+        else:
+            symbol_html = f"""
+            <div style="text-align:center;">
+                <img src="{row["symbol_image"]}"
+                     alt="{row["symbol_name"]}"
+                     width="50" height="50"
+                     style="border-radius:50%; display:block; margin:0 auto 4px auto;">
+                <em style="font-size:0.85em; color:#555;">{row["symbol_name"]}</em>
+            </div>
+            """
+
         card = mo.md(
             f"""
-            <div style="border:1px solid #ccc; border-radius:8px; padding:1px; text-align:center; margin:1px; width:150px;">
-                <h3 style="margin-bottom:10px;">{row["political_party_name"]}</h3>
-                <div style="text-align:center; margin-bottom:10px;">
-                    <strong style="font-size:1.2em;">{row["count"]:,}</strong><br>
-                    <span style="font-size:1em; color:#555;">{row["count"] / total_candidates_main * 100:.1f}%</span>
+            <div style="
+                border:1px solid #ccc;
+                border-radius:8px;
+                padding:8px;
+                text-align:center;
+                margin:4px;
+                width:150px;
+            ">
+                <h3 style="margin-bottom:10px;">
+                    {row["political_party_name"]}
+                </h3>
+
+                <div style="margin-bottom:10px;">
+                    <strong style="font-size:1.2em;">
+                        {row["count"]:,}
+                    </strong><br>
+                    <span style="font-size:1em; color:#555;">
+                        {row["count"] / total_candidates_main * 100:.1f}%
+                    </span>
                 </div>
-                <div style="text-align:center;">
-                    <img src="{row["symbol_image"]}" alt="{row["symbol_name"]}" width="50" height="50" style="border-radius:50%; display:block; margin:0 auto 1px auto;">
-                    <em style="font-size:0.85em; color:#555;">{row["symbol_name"]}</em>
-                </div>
+
+                {symbol_html}
             </div>
             """
         )
+
         party_cards.append(card)
 
-    # Display rows
+    # Display in rows of 4
     rows = [party_cards[i : i + 4] for i in range(0, len(party_cards), 4)]
+
     main_title = mo.md("## Political Party Breakdown")
+
     mo.vstack(
         [
             main_title,
